@@ -4,7 +4,7 @@ import { round, score } from './score.js';
  * Path to directory containing `_list.json` and all levels
  * FIX: remove leading "/" for GitHub Pages
  */
-const dir = './data';
+const dir = '/chippy-bag-demon-list/data'; // ✅ FIXED
 
 /**
  * Fetch list of levels
