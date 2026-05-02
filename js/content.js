@@ -2,25 +2,37 @@ import { round, score } from './score.js';
 
 /**
  * Path to directory containing `_list.json` and all levels
+ * FIX: remove leading "/" for GitHub Pages
  */
-const dir = '/data';
+const dir = 'data';
 
+/**
+ * Fetch list of levels
+ */
 export async function fetchList() {
-    const listResult = await fetch(`${dir}/_list.json`);
     try {
+        const listResult = await fetch(`${dir}/_list.json`);
         const list = await listResult.json();
+
+        if (!Array.isArray(list)) return null;
+
         return await Promise.all(
             list.map(async (path, rank) => {
-                const levelResult = await fetch(`${dir}/${path}.json`);
                 try {
+                    const levelResult = await fetch(`${dir}/${path}.json`);
                     const level = await levelResult.json();
+
+                    if (!level) return [null, path];
+
                     return [
                         {
                             ...level,
                             path,
-                            records: level.records.sort(
-                                (a, b) => b.percent - a.percent,
-                            ),
+                            records: Array.isArray(level.records)
+                                ? level.records.sort(
+                                      (a, b) => b.percent - a.percent
+                                  )
+                                : [],
                         },
                         null,
                     ];
@@ -28,7 +40,7 @@ export async function fetchList() {
                     console.error(`Failed to load level #${rank + 1} ${path}.`);
                     return [null, path];
                 }
-            }),
+            })
         );
     } catch {
         console.error(`Failed to load list.`);
@@ -36,6 +48,9 @@ export async function fetchList() {
     }
 }
 
+/**
+ * Fetch editors
+ */
 export async function fetchEditors() {
     try {
         const editorsResults = await fetch(`${dir}/_editors.json`);
@@ -46,28 +61,38 @@ export async function fetchEditors() {
     }
 }
 
+/**
+ * Build leaderboard
+ */
 export async function fetchLeaderboard() {
     const list = await fetchList();
 
+    // FIX: prevent crash if list failed to load
+    if (!list) return [[], []];
+
     const scoreMap = {};
     const errs = [];
+
     list.forEach(([level, err], rank) => {
-        if (err) {
-            errs.push(err);
+        if (err || !level) {
+            errs.push(err || 'Unknown error');
             return;
         }
 
         // Verification
-        const verifier = Object.keys(scoreMap).find(
-            (u) => u.toLowerCase() === level.verifier.toLowerCase(),
-        ) || level.verifier;
+        const verifier =
+            Object.keys(scoreMap).find(
+                (u) =>
+                    u.toLowerCase() === level.verifier?.toLowerCase()
+            ) || level.verifier;
+
         scoreMap[verifier] ??= {
             verified: [],
             completed: [],
             progressed: [],
         };
-        const { verified } = scoreMap[verifier];
-        verified.push({
+
+        scoreMap[verifier].verified.push({
             rank: rank + 1,
             level: level.name,
             score: score(rank + 1, 100, level.percentToQualify),
@@ -75,42 +100,50 @@ export async function fetchLeaderboard() {
         });
 
         // Records
-        level.records.forEach((record) => {
-            const user = Object.keys(scoreMap).find(
-                (u) => u.toLowerCase() === record.user.toLowerCase(),
-            ) || record.user;
+        (level.records || []).forEach((record) => {
+            const user =
+                Object.keys(scoreMap).find(
+                    (u) =>
+                        u.toLowerCase() === record.user?.toLowerCase()
+                ) || record.user;
+
             scoreMap[user] ??= {
                 verified: [],
                 completed: [],
                 progressed: [],
             };
-            const { completed, progressed } = scoreMap[user];
-            if (record.percent === 100) {
-                completed.push({
-                    rank: rank + 1,
-                    level: level.name,
-                    score: score(rank + 1, 100, level.percentToQualify),
-                    link: record.link,
-                });
-                return;
-            }
 
-            progressed.push({
+            const entry = {
                 rank: rank + 1,
                 level: level.name,
-                percent: record.percent,
-                score: score(rank + 1, record.percent, level.percentToQualify),
+                score: score(
+                    rank + 1,
+                    record.percent,
+                    level.percentToQualify
+                ),
                 link: record.link,
-            });
+            };
+
+            if (record.percent === 100) {
+                scoreMap[user].completed.push(entry);
+            } else {
+                scoreMap[user].progressed.push({
+                    ...entry,
+                    percent: record.percent,
+                });
+            }
         });
     });
 
-    // Wrap in extra Object containing the user and total score
+    // Final output
     const res = Object.entries(scoreMap).map(([user, scores]) => {
-        const { verified, completed, progressed } = scores;
-        const total = [verified, completed, progressed]
+        const total = [
+            scores.verified,
+            scores.completed,
+            scores.progressed,
+        ]
             .flat()
-            .reduce((prev, cur) => prev + cur.score, 0);
+            .reduce((prev, cur) => prev + (cur?.score || 0), 0);
 
         return {
             user,
@@ -119,6 +152,5 @@ export async function fetchLeaderboard() {
         };
     });
 
-    // Sort by total score
     return [res.sort((a, b) => b.total - a.total), errs];
 }
