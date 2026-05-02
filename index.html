@@ -27,12 +27,9 @@
     <link rel="stylesheet" href="css/components/btn.css">
     <link rel="stylesheet" href="css/components/tabs.css">
 
-    <!-- Vue -->
-    <script src="https://unpkg.com/vue@3.2.31/dist/vue.global.js"></script>
+    <!-- Vue (KEEP but fine as global build) -->
+    <script src="https://unpkg.com/vue@3.2.31/dist/vue.global.prod.js"></script>
     <script src="https://unpkg.com/vue-router@4.0.14/dist/vue-router.global.prod.js"></script>
-
-    <!-- App -->
-    <script type="module" src="js/main.js"></script>
 </head>
 
 <body id="app">
@@ -72,5 +69,8 @@
     </header>
 
     <router-view :class="{ dark: store.dark }"></router-view>
+
+    <!-- ✅ YOUR APP ENTRY MUST BE HERE -->
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
