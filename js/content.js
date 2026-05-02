@@ -4,7 +4,7 @@ import { round, score } from './score.js';
  * Path to directory containing `_list.json` and all levels
  * FIX: remove leading "/" for GitHub Pages
  */
-const dir = 'data';
+const dir = './data';
 
 /**
  * Fetch list of levels
@@ -67,7 +67,6 @@ export async function fetchEditors() {
 export async function fetchLeaderboard() {
     const list = await fetchList();
 
-    // FIX: prevent crash if list failed to load
     if (!list) return [[], []];
 
     const scoreMap = {};
@@ -79,7 +78,6 @@ export async function fetchLeaderboard() {
             return;
         }
 
-        // Verification
         const verifier =
             Object.keys(scoreMap).find(
                 (u) =>
@@ -99,7 +97,6 @@ export async function fetchLeaderboard() {
             link: level.verification,
         });
 
-        // Records
         (level.records || []).forEach((record) => {
             const user =
                 Object.keys(scoreMap).find(
@@ -135,7 +132,6 @@ export async function fetchLeaderboard() {
         });
     });
 
-    // Final output
     const res = Object.entries(scoreMap).map(([user, scores]) => {
         const total = [
             scores.verified,
