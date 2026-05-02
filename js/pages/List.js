@@ -19,7 +19,7 @@ export default {
 
     template: `
         <main v-if="loading">
-            <Spinner></Spinner>
+            <Spinner />
         </main>
 
         <main v-else class="page-list">
@@ -52,7 +52,7 @@ export default {
                         :verifier="level?.verifier"
                     />
 
-                    <iframe class="video" id="videoframe" :src="video" frameborder="0"></iframe>
+                    <iframe class="video" :src="video" frameborder="0"></iframe>
 
                     <ul class="stats">
                         <li>
@@ -86,13 +86,13 @@ export default {
                     </p>
 
                     <table class="records">
-                        <tr v-for="record in level?.records || []" class="record" :key="record.user">
+                        <tr v-for="record in level?.records || []" :key="record.user">
                             <td class="percent">
                                 <p>{{ record.percent }}%</p>
                             </td>
 
                             <td class="user">
-                                <a :href="record.link" target="_blank" class="type-label-lg">
+                                <a :href="record.link" target="_blank">
                                     {{ record.user }}
                                 </a>
                             </td>
@@ -111,21 +111,21 @@ export default {
                     </table>
                 </div>
 
-                <div v-else class="level" style="height: 100%; justify-content: center; align-items: center;">
+                <div v-else class="level">
                     <p>(ノಠ益ಠ)ノ彡┻━┻</p>
                 </div>
             </div>
 
             <div class="meta-container">
                 <div class="meta">
-                    <div class="errors" v-show="errors.length > 0">
-                        <p class="error" v-for="error of errors" :key="error">
+                    <div class="errors" v-show="errors.length">
+                        <p v-for="error in errors" :key="error">
                             {{ error }}
                         </p>
                     </div>
 
                     <div class="og">
-                        <p class="type-label-md">
+                        <p>
                             Website layout made by
                             <a href="https://tsl.pages.dev/" target="_blank">TheShittyList</a>
                         </p>
@@ -134,36 +134,25 @@ export default {
                     <template v-if="editors && editors.length">
                         <h3>List Editors</h3>
 
-                        <ol class="editors">
+                        <ol>
                             <li v-for="editor in editors" :key="editor.name">
                                 <img
                                     :src="\`/assets/\${roleIconMap[editor.role]}\${store.dark ? '-dark' : ''}.svg\`"
-                                    :alt="editor.role"
                                 >
-
-                                <a
-                                    v-if="editor.link"
-                                    class="type-label-lg link"
-                                    target="_blank"
-                                    :href="editor.link"
-                                >
-                                    {{ editor.name }}
-                                </a>
-
-                                <p v-else>{{ editor.name }}</p>
+                                <span>{{ editor.name }}</span>
                             </li>
                         </ol>
                     </template>
 
                     <h3>Submission Requirements</h3>
-                    <p>Achieved the record without using hacks (however, FPS bypass is allowed, up to 360fps)</p>
-                    <p>Achieved the record on the level listed on the site</p>
-                    <p>Have source audio or clicks/taps in the video</p>
-                    <p>Must show full attempt and death animation unless first attempt</p>
+                    <p>No hacks allowed (FPS bypass allowed)</p>
+                    <p>Must be on listed level</p>
+                    <p>Must include audio/clicks</p>
+                    <p>Must show full attempt/death unless first try</p>
                     <p>Must show endwall hit</p>
-                    <p>No secret/bug routes</p>
-                    <p>No easy mode records</p>
-                    <p>Legacy levels only accept records for 24 hours after removal</p>
+                    <p>No secret routes</p>
+                    <p>No easy mode runs</p>
+                    <p>Legacy levels only accept records for 24h</p>
                 </div>
             </div>
         </main>
@@ -180,24 +169,20 @@ export default {
     }),
 
     computed: {
-        // ✅ SAFE FIX (this was your crash point)
+        // ✅ FIXED CRASH SAFE LEVEL
         level() {
             const item = this.list?.[this.selected];
-            if (!item || !item[0]) return null;
+            if (!Array.isArray(item) || !item[0]) return null;
             return item[0];
         },
 
-        // ✅ SAFE VIDEO FIX
+        // ✅ FIXED VIDEO SAFETY
         video() {
             if (!this.level) return "";
 
-            if (!this.level.showcase) {
-                return embed(this.level.verification);
-            }
-
             return embed(
-                this.toggledShowcase
-                    ? this.level.showcase
+                this.level.showcase
+                    ? (this.toggledShowcase ? this.level.showcase : this.level.verification)
                     : this.level.verification
             );
         },
@@ -208,19 +193,7 @@ export default {
         this.editors = await fetchEditors();
 
         if (!this.list) {
-            this.errors = [
-                "Failed to load list. Retry in a few minutes or notify list staff.",
-            ];
-        } else {
-            this.errors.push(
-                ...this.list
-                    .filter(([_, err]) => err)
-                    .map(([_, err]) => `Failed to load level. (${err}.json)`)
-            );
-
-            if (!this.editors) {
-                this.errors.push("Failed to load list editors.");
-            }
+            this.errors = ["Failed to load list."];
         }
 
         this.selected = 0;
